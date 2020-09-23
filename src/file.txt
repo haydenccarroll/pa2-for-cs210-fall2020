@@ -1,0 +1,3 @@
+/* words is cool*/
+argc := 3;
+/*something*/
