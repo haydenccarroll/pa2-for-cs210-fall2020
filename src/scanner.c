@@ -2,31 +2,23 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "scanner.h"
 #include "makeArg.h" // from another P.A assignment, I found one of my functions in here useful
-const int NUM_OF_TOKENS = 13;
-
-// problem: something at the end of str is accessed, and it can potentially match that if it happens to be a valid lexeme
-
-char* tokenStr = "( ) , := - + / * = ; : [ ]";
-char** TOKENS = NULL;
-
-
-int* findNextToken(char* str);
-int findNumOfTokens(char* str);
-char** collectAllTokens(char* str);
-void printSubstr(char* str, int startIndex, int endIndex);
-int* findNextSubstr(char* substr, char* str);
-int* findNextAlpha(char* str);
-int* findNextNum(char* str);
-int* findNextString(char* str);
-int* findNextComment(char* str);
 
 int main(int argc, char** argv)
 {
+    scanner(argc, argv);
+}
+
+void scanner(int argc, char** argv)
+{
+    char* tokenStr = ". < > ( ) + - * / | & ; , : [ ] = := .. << >> <> <= >= ** != =>";
+    char** TOKENS = NULL;
+    const int NUM_OF_TOKENS = makearg(tokenStr, &TOKENS);
+
     FILE *fp;
     char ch;
-    int BUFFER_SIZE = 1024;
-
+    int BUFFER_SIZE = 2048;
     char string[BUFFER_SIZE];
     fp = fopen(argv[1], "r");
     if (fp == NULL)
@@ -37,26 +29,29 @@ int main(int argc, char** argv)
 
     int i=0;
     while ((ch = fgetc(fp)) != EOF)
+        string[i++] = ch;
+    string[i] = '\0';
+
+
+    char** lexemeArray = collectAllTokens(string, NUM_OF_TOKENS, TOKENS);
+    for (int i=0; lexemeArray[i] != NULL; i++)
     {
-        string[i] = ch;
-        i++;
+        printf("%s\n", lexemeArray[i]);
     }
-
-    makearg(tokenStr, &TOKENS);
-    char** lexemeArray = collectAllTokens(string);
-
 }
 
-int findNumOfTokens(char* str)
+int findNumOfTokens(char* str, int NUM_OF_TOKENS, char** TOKENS)
 {    
-    int* indexes = findNextToken(str);
+    struct Indexes indexes = {-1, -1};
     int count = 0;
-    while (indexes = findNextToken(str))
+
+    while (findNextToken(str, NUM_OF_TOKENS, TOKENS).start != -1)
     {
-        // printf("%d %d\n", indexes[0], indexes[1]);
-        str += indexes[1] + 1;
+        indexes = findNextToken(str, NUM_OF_TOKENS, TOKENS);
+        str += indexes.end + 1;
         count++;
     }
+    printf("Num of TOKENS %d\n", count);
     return count;
 }
 
@@ -69,122 +64,116 @@ void printSubstr(char* str, int startIndex, int endIndex)
     }
 }
 
-int* findNextSubstr(char* substr, char* str)
+struct Indexes findNextSubstr(char* substr, char* str)
 {
+    struct Indexes returnIndexes = {-1, -1};
     int substrLen = strlen(substr);
     int i, z;
-    for (i=0; str[i] != '\0'; i++)
+    for (i=0; i < strlen(str); i++)
     {
-        for (z=0; z < substrLen; z++)
+        for (z=0; z < substrLen && str[i+z] != '\0'; z++)
         {
             if (str[i + z] != substr[z])
                 break;
         }
         if (z == substrLen) // for loop completed, string matched
         {
-            int* returnInt = malloc(sizeof(int)*2);
-            returnInt[0] = i;
-            returnInt[1] = i + substrLen-1;
-            return returnInt;
+            returnIndexes.start = i;
+            returnIndexes.end = i + substrLen-1;
+            return returnIndexes;
         }
     }
-    return NULL;
+    return returnIndexes;
 }
 
-int* findNextToken(char* str)
+struct Indexes findNextToken(char* str, int NUM_OF_TOKENS, char** TOKENS)
 {
-    printf("start\n");
-    if (strlen(str) == 0) return NULL;
+    // printf("findNextToken started\n");
+    struct Indexes returnIndexes = {-1, -1};
+    if (strlen(str) == 0) return returnIndexes;
     int i, z, minIndex;
-    minIndex = strlen(str);
-    int* indexes = calloc(sizeof(int), 2);
+    minIndex = strlen(str); // sets minIndex as high as the minIndex could possibly be
 
-    if (findNextComment(str) != NULL && findNextComment(str)[0] < minIndex)
+    if (findNextComment(str).start != -1 && findNextComment(str).start < minIndex)
     {
-        minIndex = findNextComment(str)[0];
-        indexes[0] = findNextComment(str)[0];
-        indexes[1] = findNextComment(str)[1];
+        minIndex = findNextComment(str).start;
+        returnIndexes.start = findNextComment(str).start;
+        returnIndexes.end = findNextComment(str).end;
     }
 
-    if (findNextString(str) != NULL && findNextString(str)[0] < minIndex)
+    if (findNextString(str).start != -1 && findNextString(str).start < minIndex)
     {
-        minIndex = findNextString(str)[0];
-        indexes[0] = findNextString(str)[0];
-        indexes[1] = findNextString(str)[1];
+        minIndex = findNextString(str).start;
+        returnIndexes.start = findNextString(str).start;
+        returnIndexes.end = findNextString(str).end;
     }
 
-    if (findNextAlpha(str) != NULL && findNextAlpha(str)[0] < minIndex)
+    if (findNextAlpha(str).start != -1 && findNextAlpha(str).start < minIndex)
     {
-        minIndex = findNextAlpha(str)[0];
-        indexes[0] = findNextAlpha(str)[0];
-        indexes[1] = findNextAlpha(str)[1];
+        minIndex = findNextAlpha(str).start;
+        returnIndexes.start = findNextAlpha(str).start;
+        returnIndexes.end = findNextAlpha(str).end;
     }
 
-    if (findNextNum(str) != NULL && findNextNum(str)[0] < minIndex)
+    if (findNextNum(str).start != -1 && findNextNum(str).start < minIndex)
     {
-        minIndex = findNextNum(str)[0];
-        indexes[0] = findNextNum(str)[0];
-        indexes[1] = findNextNum(str)[1];
+        minIndex = findNextNum(str).start;
+        returnIndexes.start = findNextNum(str).start;
+        returnIndexes.end = findNextNum(str).end;
     }
 
     for (z = 0; z < NUM_OF_TOKENS; z++)
     {
-        if (findNextSubstr(TOKENS[z], str) == NULL) // isnt found
-            continue;
-
-        if (findNextSubstr(TOKENS[z], str)[0] < minIndex)
+        // printf("%d %s\n", z, TOKENS[z]);
+        if (findNextSubstr(TOKENS[z], str).start != -1 && 
+            findNextSubstr(TOKENS[z], str).start < minIndex)
         {
-            minIndex = findNextSubstr(TOKENS[z], str)[0];
-            indexes[0] = findNextSubstr(TOKENS[z], str)[0];
-            indexes[1] = findNextSubstr(TOKENS[z], str)[1];
+            minIndex = findNextSubstr(TOKENS[z], str).start;
+            returnIndexes.start = findNextSubstr(TOKENS[z], str).start;
+            returnIndexes.end = findNextSubstr(TOKENS[z], str).end;
         }
-    }
-
     
-    printf("end\n");
-
-    // printf("%d (%d, %d) %d %s\n", minIndex, indexes[0], indexes[1], strlen(str), str);
-    if (minIndex == strlen(str))
-        return NULL;
-    else 
-        return indexes;
+    }
+    // printf("Find next token ended\n");
+    return returnIndexes;
 }
 
 // returns 2d char array
-char** collectAllTokens(char* str)
+char** collectAllTokens(char* str, int NUM_OF_TOKENS, char** TOKENS)
 {
-    int tokenCount = findNumOfTokens(str);
-    printf("%d tokenCount", tokenCount);
+    int tokenCount = findNumOfTokens(str, NUM_OF_TOKENS, TOKENS);
 
     // 2d char array
     char** strArray = malloc(sizeof(char*) * (tokenCount+1));
     strArray[tokenCount] = NULL;
 
-    int* indexes = findNextToken(str);
+    struct Indexes indexes = {-1, -1};
 
     int i = 0;
-    while (indexes = findNextToken(str))
+    while (findNextToken(str, NUM_OF_TOKENS, TOKENS).start != -1)
     {
+        indexes = findNextToken(str, NUM_OF_TOKENS, TOKENS);
 
-        int tokenLen = indexes[1] - indexes[0] + 1;
+        int tokenLen = indexes.end - indexes.start + 1;
         strArray[i] = malloc(sizeof(char) * (tokenLen + 1)); // allocates memory for char array
-        memcpy(strArray[i], str + indexes[0], sizeof(char) * tokenLen); // copies substr to strArray location
-        strArray[tokenLen] = '\0';
-        printSubstr(str, indexes[0], indexes[1]);
-        printf("\n");
+        memcpy(strArray[i], str + indexes.start, sizeof(char) * tokenLen); // copies substr to strArray location
+        strArray[i][tokenLen] = '\0';
+        // printSubstr(str, indexes.start, indexes.end);
+        // printf("\n");
 
-        str += indexes[1] + 1;
+        str += indexes.end + 1;
         i++;
     }
     return strArray;
 }
 
 // returns [start, end] indexes
-int* findNextAlpha(char* str)
+struct Indexes findNextAlpha(char* str)
 {
     int i;
     int inWord = 0;
     int wordStart = -1, wordEnd = -1;
+    struct Indexes returnIndexes = {-1, -1};
     for (i = 0; i < strlen(str); i++)
     {
         if (inWord == 0 && (isalpha(str[i]) || str[i] == '_'))
@@ -195,18 +184,18 @@ int* findNextAlpha(char* str)
         if (inWord == 1 && !(isalnum(str[i]) || str[i] == '_'))
         {
             wordEnd = i-1;
-            int* ptr = malloc(sizeof(int) * 2);
-            ptr[0] = wordStart;
-            ptr[1] = wordEnd;
-            return ptr;
+            returnIndexes.start = wordStart;
+            returnIndexes.end = wordEnd;
+            return returnIndexes;
         }
     }
-    return NULL;
+    return returnIndexes;
 }
 
 // returns [start, end] indexes
-int* findNextNum(char* str)
+struct Indexes findNextNum(char* str)
 {
+    struct Indexes returnIndexes = {-1, -1};
     int i;
     int inNum = 0;
     int numStart = -1, numEnd = -1;
@@ -220,18 +209,18 @@ int* findNextNum(char* str)
         if (inNum == 1 && !isdigit(str[i]))
         {
             numEnd = i-1;
-            int* ptr = malloc(sizeof(int) * 2);
-            ptr[0] = numStart;
-            ptr[1] = numEnd;
-            return ptr;
+            returnIndexes.start = numStart;
+            returnIndexes.end = numEnd;
+            return returnIndexes;
         }
     }
-    return NULL;
+    return returnIndexes;
 }
 
 // returns [start, end] indexes
-int* findNextString(char* str)
+struct Indexes findNextString(char* str)
 {
+    struct Indexes returnIndexes = {-1, -1};
     int i;
     int inStr = 0;
     int strStart = -1, strEnd = -1;
@@ -247,19 +236,19 @@ int* findNextString(char* str)
         {
             strEnd = i;
             inStr = 0;
-            int* ptr = malloc(sizeof(int) * 2);
-            ptr[0] = strStart;
-            ptr[1] = strEnd;
-            return ptr;
+            returnIndexes.start = strStart;
+            returnIndexes.end = strEnd;
+            return returnIndexes;
         }
     }
-    return NULL;
+    return returnIndexes;
 }
 
 // returns [start, end] indexes
-int* findNextComment(char* str)
+struct Indexes findNextComment(char* str)
 {
     int i;
+    struct Indexes returnIndexes = {-1, -1};
     int inStr = 0;
     int strStart = -1, strEnd = -1;
     for (i = 0; i < strlen(str)-1; i++)
@@ -274,11 +263,10 @@ int* findNextComment(char* str)
         {
             strEnd = i+1;
             inStr = 0;
-            int* ptr = malloc(sizeof(int) * 2);
-            ptr[0] = strStart;
-            ptr[1] = strEnd;
-            return ptr;
+            returnIndexes.start = strStart;
+            returnIndexes.end = strEnd;
+            return returnIndexes;
         }
     }
-    return NULL;
+    return returnIndexes;
 }
