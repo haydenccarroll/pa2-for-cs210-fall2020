@@ -9,7 +9,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}\\${fileBasenameNoExtension}.exe",
-            "args": ["scanner.c makeArg.c"],
+            "args": ["scanner.c makeArg.c", "lexer.c", "-g"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

@@ -1,18 +1,10 @@
-#include <string.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "scanner.h"
-#include "makeArg.h" // from another P.A assignment, I found one of my functions in here useful
 
-int main(int argc, char** argv)
-{
-    scanner(argc, argv);
-}
 
-void scanner(int argc, char** argv)
+
+char** scanner(int argc, char** argv)
 {
-    char* tokenStr = ". < > ( ) + - * / | & ; , : [ ] = := .. << >> <> <= >= ** != =>";
+    char* tokenStr = ":= .. << >> <> <= >= ** != -> . < > ( ) + - * / | & ; , : [ ] =";
     char** TOKENS = NULL;
     const int NUM_OF_TOKENS = makearg(tokenStr, &TOKENS);
 
@@ -31,13 +23,9 @@ void scanner(int argc, char** argv)
     while ((ch = fgetc(fp)) != EOF)
         string[i++] = ch;
     string[i] = '\0';
+    fclose(fp);
 
-
-    char** lexemeArray = collectAllTokens(string, NUM_OF_TOKENS, TOKENS);
-    for (int i=0; lexemeArray[i] != NULL; i++)
-    {
-        printf("%s\n", lexemeArray[i]);
-    }
+    return collectAllTokens(string, NUM_OF_TOKENS, TOKENS);
 }
 
 int findNumOfTokens(char* str, int NUM_OF_TOKENS, char** TOKENS)
@@ -51,7 +39,6 @@ int findNumOfTokens(char* str, int NUM_OF_TOKENS, char** TOKENS)
         str += indexes.end + 1;
         count++;
     }
-    printf("Num of TOKENS %d\n", count);
     return count;
 }
 
@@ -88,7 +75,6 @@ struct Indexes findNextSubstr(char* substr, char* str)
 
 struct Indexes findNextToken(char* str, int NUM_OF_TOKENS, char** TOKENS)
 {
-    // printf("findNextToken started\n");
     struct Indexes returnIndexes = {-1, -1};
     if (strlen(str) == 0) return returnIndexes;
     int i, z, minIndex;
@@ -124,7 +110,6 @@ struct Indexes findNextToken(char* str, int NUM_OF_TOKENS, char** TOKENS)
 
     for (z = 0; z < NUM_OF_TOKENS; z++)
     {
-        // printf("%d %s\n", z, TOKENS[z]);
         if (findNextSubstr(TOKENS[z], str).start != -1 && 
             findNextSubstr(TOKENS[z], str).start < minIndex)
         {
@@ -134,7 +119,6 @@ struct Indexes findNextToken(char* str, int NUM_OF_TOKENS, char** TOKENS)
         }
     
     }
-    // printf("Find next token ended\n");
     return returnIndexes;
 }
 
@@ -158,6 +142,11 @@ char** collectAllTokens(char* str, int NUM_OF_TOKENS, char** TOKENS)
         strArray[i] = malloc(sizeof(char) * (tokenLen + 1)); // allocates memory for char array
         memcpy(strArray[i], str + indexes.start, sizeof(char) * tokenLen); // copies substr to strArray location
         strArray[i][tokenLen] = '\0';
+
+        /**
+         *  Uncomment this to print values as they are found
+         **/
+
         // printSubstr(str, indexes.start, indexes.end);
         // printf("\n");
 
