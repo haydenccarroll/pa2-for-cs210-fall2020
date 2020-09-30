@@ -4,13 +4,13 @@
 
 char** scanner(int argc, char** argv)
 {
-    char* tokenStr = ":= .. << >> <> <= >= ** != -> . < > ( ) + - * / | & ; , : [ ] =";
+    char* tokenStr = ":= .. << >> <> <= => >= ** != -> . < > ( ) + - * / | & ; , : [ ] =";
     char** TOKENS = NULL;
     const int NUM_OF_TOKENS = makearg(tokenStr, &TOKENS);
 
     FILE *fp;
     char ch;
-    int BUFFER_SIZE = 2048;
+    int BUFFER_SIZE = 10000;
     char string[BUFFER_SIZE];
     fp = fopen(argv[1], "r");
     if (fp == NULL)
@@ -195,7 +195,7 @@ struct Indexes findNextNum(char* str)
             inNum = 1;
             numStart = i;
         }
-        if (inNum == 1 && !isdigit(str[i]))
+        if (inNum == 1 && !(isxdigit(str[i]) || str[i] == '-' || str[i] == '.' || str[i] == '#'))
         {
             numEnd = i-1;
             returnIndexes.start = numStart;
